@@ -6,22 +6,20 @@ from flask import Flask
 import threading
 from utils import check_ban
 
-app = Flask(__name__)
+# Load environment variables from .env file
 load_dotenv()
 
+# Get the application ID and token from environment variables
 APPLICATION_ID = os.getenv("APPLICATION_ID")
 TOKEN = os.getenv("TOKEN")
 
+# Exit with error if TOKEN is missing
 if not TOKEN:
-    print("Error: Missing TOKEN environment variable")
+    print("Error: Missing TOKEN environment variable. Please add TOKEN in your .env file.")
     exit(1)
 
-intents = discord.Intents.default()
-intents.message_content = True
-bot = commands.Bot(command_prefix="!", intents=intents)
-
-DEFAULT_LANG = "en"
-user_languages = {}
+# Flask app for basic health check
+app = Flask(__name__)
 nomBot = "None"
 
 @app.route('/')
@@ -29,28 +27,38 @@ def home():
     global nomBot
     return f"Bot {nomBot} is working"
 
+# Run Flask in a separate thread
 def run_flask():
     app.run(host='0.0.0.0', port=10000)
 
 threading.Thread(target=run_flask).start()
 
+# Setup Discord bot
+intents = discord.Intents.default()
+intents.message_content = True
+bot = commands.Bot(command_prefix="!", intents=intents)
+
+# Language settings per user
+DEFAULT_LANG = "en"
+user_languages = {}
+
 @bot.event
 async def on_ready():
     global nomBot
     nomBot = f"{bot.user}"
-    print(f"Le bot est connecté en tant que {bot.user}")
+    print(f"Bot is connected as {bot.user}")
 
 @bot.command(name="guilds")
 async def show_guilds(ctx):
     guild_names = [f"{i+1}. {guild.name}" for i, guild in enumerate(bot.guilds)]
     guild_list = "\n".join(guild_names)
-    await ctx.send(f"Le bot est dans les guilds suivantes :\n{guild_list}")
+    await ctx.send(f"Bot is in the following guilds:\n{guild_list}")
 
 @bot.command(name="lang")
 async def change_language(ctx, lang_code: str):
     lang_code = lang_code.lower()
     if lang_code not in ["en", "fr"]:
-        await ctx.send("❌ Invalid language. Available: `en`, `fr`")
+        await ctx.send("❌ Invalid language. Available options: `en`, `fr`")
         return
     user_languages[ctx.author.id] = lang_code
     message = "✅ Language set to English." if lang_code == 'en' else "✅ Langue définie sur le français."
@@ -61,12 +69,12 @@ async def check_ban_command(ctx):
     content = ctx.message.content
     user_id = content[3:].strip()
     lang = user_languages.get(ctx.author.id, "en")
-    print(f"Commande fait par {ctx.author} (lang={lang})")
+    print(f"Command issued by {ctx.author} (lang={lang})")
 
     if not user_id.isdigit():
         message = {
             "en": f"{ctx.author.mention} ❌ **Invalid UID!**\n➡️ Please use: `!ID 123456789`",
-            "fr": f"{ctx.author.mention} ❌ **UID invalide !**\n➡️ Veuillez fournir un UID valide sous la forme : `!ID 123456789`"
+            "fr": f"{ctx.author.mention} ❌ **UID invalide !**\n➡️ Veuillez fournir un UID valide : `!ID 123456789`"
         }
         await ctx.send(message[lang])
         return
@@ -75,27 +83,26 @@ async def check_ban_command(ctx):
         try:
             ban_status = await check_ban(user_id)
         except Exception as e:
-            await ctx.send(f"{ctx.author.mention} ⚠️ Error:\n``````")
+            await ctx.send(f"{ctx.author.mention} ⚠️ An error occurred while checking the ban status.")
             return
 
         if ban_status is None:
             message = {
-                "en": f"{ctx.author.mention} ❌ **Could not get information. Please try again later.**",
-                "fr": f"{ctx.author.mention} ❌ **Impossible d'obtenir les informations.**\nVeuillez réessayer plus tard."
+                "en": f"{ctx.author.mention} ❌ Could not get information. Try again later.",
+                "fr": f"{ctx.author.mention} ❌ Impossible d'obtenir les informations. Réessayez plus tard."
             }
             await ctx.send(message[lang])
             return
 
         is_banned = int(ban_status.get("is_banned", 0))
         period = ban_status.get("period", "N/A")
-        nickname = ban_status.get("nickname", "NA")
+        nickname = ban_status.get("nickname", "N/A")
         region = ban_status.get("region", "N/A")
         id_str = f"`{user_id}`"
 
-        if isinstance(period, int):
-            period_str = f"more than {period} months" if lang == "en" else f"plus de {period} mois"
-        else:
-            period_str = "unavailable" if lang == "en" else "indisponible"
+        period_str = f"more than {period} months" if isinstance(period, int) and lang == "en" else (
+                     f"plus de {period} mois" if isinstance(period, int) else
+                     ("unavailable" if lang == "en" else "indisponible"))
 
         embed = discord.Embed(
             color=0xFF0000 if is_banned else 0x00FF00,
@@ -118,7 +125,7 @@ async def check_ban_command(ctx):
             embed.title = "**▌ Clean Account ✅ **" if lang == "en" else "**▌ Compte non banni ✅ **"
             embed.description = (
                 f"**• {'Status' if lang == 'en' else 'Statut'} :** "
-                f"{'No sufficient evidence of cheat usage on this account.' if lang == 'en' else 'Aucune preuve suffisante pour confirmer l’utilisation de hacks sur ce compte.'}\n"
+                f"{'No sufficient evidence of cheat usage.' if lang == 'en' else 'Aucune preuve suffisante pour confirmer l’utilisation de hacks.'}\n"
                 f"**• {'Nickname' if lang == 'en' else 'Pseudo'} :** `{nickname}`\n"
                 f"**• {'Player ID' if lang == 'en' else 'ID du joueur'} :** `{id_str}`\n"
                 f"**• {'Region' if lang == 'en' else 'Région'} :** `{region}`"
@@ -131,4 +138,5 @@ async def check_ban_command(ctx):
 
         await ctx.send(f"{ctx.author.mention}", embed=embed, file=file)
 
+# Start the bot
 bot.run(TOKEN)
