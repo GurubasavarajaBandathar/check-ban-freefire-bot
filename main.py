@@ -70,7 +70,6 @@ async def check_ban_command(ctx):
     user_id = content[3:].strip()
     lang = user_languages.get(ctx.author.id, "en")
     print(f"Command issued by {ctx.author} (lang={lang})")
-
     if not user_id.isdigit():
         message = {
             "en": f"{ctx.author.mention} ❌ **Invalid UID!**\n➡️ Please use: `!ID 123456789`",
@@ -78,14 +77,12 @@ async def check_ban_command(ctx):
         }
         await ctx.send(message[lang])
         return
-
     async with ctx.typing():
         try:
             ban_status = await check_ban(user_id)
         except Exception as e:
             await ctx.send(f"{ctx.author.mention} ⚠️ An error occurred while checking the ban status.")
             return
-
         if ban_status is None:
             message = {
                 "en": f"{ctx.author.mention} ❌ Could not get information. Try again later.",
@@ -93,22 +90,18 @@ async def check_ban_command(ctx):
             }
             await ctx.send(message[lang])
             return
-
         is_banned = int(ban_status.get("is_banned", 0))
         period = ban_status.get("period", "N/A")
         nickname = ban_status.get("nickname", "N/A")
         region = ban_status.get("region", "N/A")
         id_str = f"`{user_id}`"
-
         period_str = f"more than {period} months" if isinstance(period, int) and lang == "en" else (
                      f"plus de {period} mois" if isinstance(period, int) else
                      ("unavailable" if lang == "en" else "indisponible"))
-
         embed = discord.Embed(
             color=0xFF0000 if is_banned else 0x00FF00,
             timestamp=ctx.message.created_at
         )
-
         if is_banned:
             embed.title = "**▌ Banned Account 🛑 **" if lang == "en" else "**▌ Compte banni 🛑 **"
             embed.description = (
@@ -132,10 +125,8 @@ async def check_ban_command(ctx):
             )
             file = discord.File("assets/notbanned.gif", filename="notbanned.gif")
             embed.set_image(url="attachment://notbanned.gif")
-
         embed.set_thumbnail(url=ctx.author.avatar.url if ctx.author.avatar else ctx.author.default_avatar.url)
         embed.set_footer(text="DEVELOPED BY THUG•")
-
         await ctx.send(f"{ctx.author.mention}", embed=embed, file=file)
 
 # Start the bot
