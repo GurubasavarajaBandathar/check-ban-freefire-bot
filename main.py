@@ -7,10 +7,14 @@ import threading
 from utils import check_ban
 
 app = Flask(__name__)
-
 load_dotenv()
+
 APPLICATION_ID = os.getenv("APPLICATION_ID")
 TOKEN = os.getenv("TOKEN")
+
+if not TOKEN:
+    print("Error: Missing TOKEN environment variable")
+    exit(1)
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -18,7 +22,6 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 DEFAULT_LANG = "en"
 user_languages = {}
-
 nomBot = "None"
 
 @app.route('/')
@@ -49,7 +52,6 @@ async def change_language(ctx, lang_code: str):
     if lang_code not in ["en", "fr"]:
         await ctx.send("❌ Invalid language. Available: `en`, `fr`")
         return
-
     user_languages[ctx.author.id] = lang_code
     message = "✅ Language set to English." if lang_code == 'en' else "✅ Langue définie sur le français."
     await ctx.send(f"{ctx.author.mention} {message}")
@@ -59,7 +61,6 @@ async def check_ban_command(ctx):
     content = ctx.message.content
     user_id = content[3:].strip()
     lang = user_languages.get(ctx.author.id, "en")
-
     print(f"Commande fait par {ctx.author} (lang={lang})")
 
     if not user_id.isdigit():
@@ -74,7 +75,7 @@ async def check_ban_command(ctx):
         try:
             ban_status = await check_ban(user_id)
         except Exception as e:
-            await ctx.send(f"{ctx.author.mention} ⚠️ Error:\n```{str(e)}```")
+            await ctx.send(f"{ctx.author.mention} ⚠️ Error:\n``````")
             return
 
         if ban_status is None:
@@ -111,7 +112,6 @@ async def check_ban_command(ctx):
                 f"**• {'Player ID' if lang == 'en' else 'ID du joueur'} :** `{id_str}`\n"
                 f"**• {'Region' if lang == 'en' else 'Région'} :** `{region}`"
             )
-            # embed.set_image(url="https://i.ibb.co/wFxTy8TZ/banned.gif")
             file = discord.File("assets/banned.gif", filename="banned.gif")
             embed.set_image(url="attachment://banned.gif")
         else:
@@ -123,12 +123,12 @@ async def check_ban_command(ctx):
                 f"**• {'Player ID' if lang == 'en' else 'ID du joueur'} :** `{id_str}`\n"
                 f"**• {'Region' if lang == 'en' else 'Région'} :** `{region}`"
             )
-            # embed.set_image(url="https://i.ibb.co/Kx1RYVKZ/notbanned.gif")
             file = discord.File("assets/notbanned.gif", filename="notbanned.gif")
             embed.set_image(url="attachment://notbanned.gif")
 
         embed.set_thumbnail(url=ctx.author.avatar.url if ctx.author.avatar else ctx.author.default_avatar.url)
         embed.set_footer(text="DEVELOPED BY THUG•")
-        await ctx.send(f"{ctx.author.mention}", embed=embed ,file=file)
+
+        await ctx.send(f"{ctx.author.mention}", embed=embed, file=file)
 
 bot.run(TOKEN)
