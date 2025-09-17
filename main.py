@@ -164,5 +164,15 @@ async def listbans(ctx):
     else:
         await ctx.send(f"Banned users:\n{banned_list}")
 
+# New ban command added here
+@bot.command()
+@commands.has_permissions(ban_members=True)
+async def ban(ctx, member: discord.Member, *, reason=None):
+    try:
+        await member.ban(reason=reason)
+        await ctx.send(f"{member} has been banned. Reason: {reason}")
+    except Exception as e:
+        await ctx.send(f"Failed to ban {member}. Error: {e}")
+
 # Start the bot
 bot.run(TOKEN)
