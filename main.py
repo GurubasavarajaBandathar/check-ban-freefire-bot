@@ -153,13 +153,10 @@ async def listbans(ctx):
     except Exception as e:
         await ctx.send(f"An error occurred: {e}")
         return
-
     if not banned_users:
         await ctx.send("There are no banned users in this server.")
         return
-
     banned_list = "\n".join(f"{ban.user} - ID: {ban.user.id}" for ban in banned_users)
-
     if len(banned_list) > 1900:
         chunks = [banned_list[i:i+1900] for i in range(0, len(banned_list), 1900)]
         for chunk in chunks:
