@@ -142,15 +142,30 @@ async def checkban(ctx, user_id: int):
         else:
             await ctx.send(f"{ctx.author.mention} User with ID `{user_id}` is not banned in {ctx.guild.name}.")
 
-# New !listbans command to list all banned users in the server
+# New !listbans command with error handling and message splitting
 @bot.command()
 async def listbans(ctx):
-    banned_users = await ctx.guild.bans()
+    try:
+        banned_users = await ctx.guild.bans()
+    except discord.Forbidden:
+        await ctx.send("I do not have permission to view the ban list.")
+        return
+    except Exception as e:
+        await ctx.send(f"An error occurred: {e}")
+        return
+
     if not banned_users:
         await ctx.send("There are no banned users in this server.")
         return
+
     banned_list = "\n".join(f"{ban.user} - ID: {ban.user.id}" for ban in banned_users)
-    await ctx.send(f"Banned users:\n{banned_list}")
+
+    if len(banned_list) > 1900:
+        chunks = [banned_list[i:i+1900] for i in range(0, len(banned_list), 1900)]
+        for chunk in chunks:
+            await ctx.send(f"Banned users:\n{chunk}")
+    else:
+        await ctx.send(f"Banned users:\n{banned_list}")
 
 # Start the bot
 bot.run(TOKEN)
