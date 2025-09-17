@@ -4,7 +4,7 @@ from discord.ext import commands
 from dotenv import load_dotenv
 from flask import Flask
 import threading
-from utils import check_ban
+from utils import check_ban, is_user_banned  # Import the new function for guild ban check
 
 # Load environment variables from .env file
 load_dotenv()
@@ -64,6 +64,7 @@ async def change_language(ctx, lang_code: str):
     message = "✅ Language set to English." if lang_code == 'en' else "✅ Langue définie sur le français."
     await ctx.send(f"{ctx.author.mention} {message}")
 
+# Original !ID command using external API - kept for reference, or remove if not needed
 @bot.command(name="ID")
 async def check_ban_command(ctx):
     content = ctx.message.content
@@ -128,6 +129,18 @@ async def check_ban_command(ctx):
         embed.set_thumbnail(url=ctx.author.avatar.url if ctx.author.avatar else ctx.author.default_avatar.url)
         embed.set_footer(text="DEVELOPED BY THUG•")
         await ctx.send(f"{ctx.author.mention}", embed=embed, file=file)
+
+# New !checkban command implementation using Discord guild ban check
+@bot.command(name="checkban")
+async def checkban(ctx, user_id: int):
+    lang = user_languages.get(ctx.author.id, "en")
+    print(f"Checkban command issued by {ctx.author} with user_id {user_id} (lang={lang})")
+    async with ctx.typing():
+        banned = await is_user_banned(ctx.guild, user_id)
+        if banned:
+            await ctx.send(f"{ctx.author.mention} User with ID `{user_id}` is banned in {ctx.guild.name}.")
+        else:
+            await ctx.send(f"{ctx.author.mention} User with ID `{user_id}` is not banned in {ctx.guild.name}.")
 
 # Start the bot
 bot.run(TOKEN)
