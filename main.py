@@ -142,5 +142,15 @@ async def checkban(ctx, user_id: int):
         else:
             await ctx.send(f"{ctx.author.mention} User with ID `{user_id}` is not banned in {ctx.guild.name}.")
 
+# New !listbans command to list all banned users in the server
+@bot.command()
+async def listbans(ctx):
+    banned_users = await ctx.guild.bans()
+    if not banned_users:
+        await ctx.send("There are no banned users in this server.")
+        return
+    banned_list = "\n".join(f"{ban.user} - ID: {ban.user.id}" for ban in banned_users)
+    await ctx.send(f"Banned users:\n{banned_list}")
+
 # Start the bot
 bot.run(TOKEN)
