@@ -10,16 +10,15 @@ from utils import check_ban, is_user_banned
 
 # Load environment variables from .env file
 load_dotenv()
-
 APPLICATION_ID = os.getenv("APPLICATION_ID")
 TOKEN = os.getenv("TOKEN")
-
 if not TOKEN:
     print("Error: Missing TOKEN environment variable. Please add TOKEN in your .env file.")
     exit(1)
 
 app = Flask(__name__)
 nomBot = "None"
+
 @app.route('/')
 def home():
     global nomBot
@@ -61,15 +60,18 @@ async def change_language(ctx, lang_code: str):
 
 @bot.command(name="ID")
 async def check_ban_command(ctx):
-    # Your previous code here
+    # Place your original !ID command code here with correct indentation
+    pass
 
 @bot.command(name="checkban")
 async def checkban(ctx, user_id: int):
-    # Your previous code here
+    # Place your original !checkban command code here with correct indentation
+    pass
 
 @bot.command()
 async def listbans(ctx):
-    # Your previous code here
+    # Place your original !listbans command code here with correct indentation
+    pass
 
 @bot.command(name="check_freefire_id")
 @commands.cooldown(rate=1, per=10, type=commands.BucketType.user)
@@ -77,7 +79,7 @@ async def check_freefire_id(ctx, ff_id: str):
     url = f"http://raw.thug4ff.com/check_ban/check_ban/{ff_id}"
     async with aiohttp.ClientSession() as session:
         data = None
-        for attempt in range(3):  # retry 3 times
+        for attempt in range(3):
             try:
                 async with session.get(url) as response:
                     if response.status == 200:
@@ -85,12 +87,10 @@ async def check_freefire_id(ctx, ff_id: str):
                         break
             except Exception:
                 pass
-            await asyncio.sleep(2)  # wait 2 seconds before retry
-
+            await asyncio.sleep(2)
         if data is None:
             await ctx.send("❌ Could not reach the Free Fire ban API. Please try again later.")
             return
-
         if data.get("is_banned", 0) == 1:
             await ctx.send(f"✅ Free Fire ID `{ff_id}` is **BANNED**.")
         else:
