@@ -4,21 +4,18 @@ from discord.ext import commands
 from dotenv import load_dotenv
 from flask import Flask
 import threading
-from utils import check_ban, is_user_banned  # Import the new function for guild ban check
+from utils import check_ban, is_user_banned  # External API function imported
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv()
-
-# Get the application ID and token from environment variables
 APPLICATION_ID = os.getenv("APPLICATION_ID")
 TOKEN = os.getenv("TOKEN")
 
-# Exit with error if TOKEN is missing
 if not TOKEN:
     print("Error: Missing TOKEN environment variable. Please add TOKEN in your .env file.")
     exit(1)
 
-# Flask app for basic health check
+# Flask app for health check
 app = Flask(__name__)
 nomBot = "None"
 
@@ -27,18 +24,16 @@ def home():
     global nomBot
     return f"Bot {nomBot} is working"
 
-# Run Flask in a separate thread
 def run_flask():
     app.run(host='0.0.0.0', port=10000)
 
 threading.Thread(target=run_flask).start()
 
-# Setup Discord bot
+# Setup Discord intents and bot
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Language settings per user
 DEFAULT_LANG = "en"
 user_languages = {}
 
@@ -64,13 +59,14 @@ async def change_language(ctx, lang_code: str):
     message = "✅ Language set to English." if lang_code == 'en' else "✅ Langue définie sur le français."
     await ctx.send(f"{ctx.author.mention} {message}")
 
-# Original !ID command using external API - kept for reference, or remove if not needed
+# !ID command calling the external Free Fire API asynchronously
 @bot.command(name="ID")
 async def check_ban_command(ctx):
     content = ctx.message.content
     user_id = content[3:].strip()
     lang = user_languages.get(ctx.author.id, "en")
     print(f"Command issued by {ctx.author} (lang={lang})")
+
     if not user_id.isdigit():
         message = {
             "en": f"{ctx.author.mention} ❌ **Invalid UID!**\n➡️ Please use: `!ID 123456789`",
@@ -78,12 +74,14 @@ async def check_ban_command(ctx):
         }
         await ctx.send(message[lang])
         return
+
     async with ctx.typing():
         try:
             ban_status = await check_ban(user_id)
         except Exception as e:
             await ctx.send(f"{ctx.author.mention} ⚠️ An error occurred while checking the ban status.")
             return
+
         if ban_status is None:
             message = {
                 "en": f"{ctx.author.mention} ❌ Could not get information. Try again later.",
@@ -91,14 +89,16 @@ async def check_ban_command(ctx):
             }
             await ctx.send(message[lang])
             return
+
         is_banned = int(ban_status.get("is_banned", 0))
         period = ban_status.get("period", "N/A")
         nickname = ban_status.get("nickname", "N/A")
         region = ban_status.get("region", "N/A")
         id_str = f"`{user_id}`"
         period_str = f"more than {period} months" if isinstance(period, int) and lang == "en" else (
-                     f"plus de {period} mois" if isinstance(period, int) else
-                     ("unavailable" if lang == "en" else "indisponible"))
+            f"plus de {period} mois" if isinstance(period, int) else
+            ("unavailable" if lang == "en" else "indisponible")
+        )
         embed = discord.Embed(
             color=0xFF0000 if is_banned else 0x00FF00,
             timestamp=ctx.message.created_at
@@ -130,7 +130,6 @@ async def check_ban_command(ctx):
         embed.set_footer(text="DEVELOPED BY THUG•")
         await ctx.send(f"{ctx.author.mention}", embed=embed, file=file)
 
-# New !checkban command implementation using Discord guild ban check
 @bot.command(name="checkban")
 async def checkban(ctx, user_id: int):
     lang = user_languages.get(ctx.author.id, "en")
@@ -142,11 +141,10 @@ async def checkban(ctx, user_id: int):
         else:
             await ctx.send(f"{ctx.author.mention} User with ID `{user_id}` is not banned in {ctx.guild.name}.")
 
-# Fixed !listbans command to handle async generator and errors
 @bot.command()
 async def listbans(ctx):
     try:
-        banned_users = [ban async for ban in ctx.guild.bans()]  # Fixed async iteration
+        banned_users = [ban async for ban in ctx.guild.bans()]
     except discord.Forbidden:
         await ctx.send("I do not have permission to view the ban list.")
         return
@@ -164,7 +162,6 @@ async def listbans(ctx):
     else:
         await ctx.send(f"Banned users:\n{banned_list}")
 
-# New ban command added here
 @bot.command()
 @commands.has_permissions(ban_members=True)
 async def ban(ctx, member: discord.Member, *, reason=None):
@@ -174,5 +171,4 @@ async def ban(ctx, member: discord.Member, *, reason=None):
     except Exception as e:
         await ctx.send(f"Failed to ban {member}. Error: {e}")
 
-# Start the bot
 bot.run(TOKEN)
